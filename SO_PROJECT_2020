@@ -1,0 +1,237 @@
+#______________________________________________________________________________
+#SO-PROJECT 2020
+#Alyssa Johnson
+
+#Project: Look at positions of ACT galaxy clusters (~4000) and look at Planck
+#data at 353, 545, 857 Ghz to look for dust emission.      
+#______________________________________________________________________________ 
+#Initializing notebook
+#______________________________________________________________________________
+
+import numpy as np
+import matplotlib.pyplot as plt
+import astropy
+import healpy as hp
+
+from healpy import  *
+from astropy.visualization import astropy_mpl_style
+from astropy.utils.data import get_pkg_data_filename
+from astropy.table import Table
+from astropy.io import fits
+from astropy.coordinates import Galactic
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.special import sph_harm
+from pylab import *
+
+plt.style.use(astropy_mpl_style)
+
+#______________________________________________________________________________  
+#Setting paths for Planck maps   
+#______________________________________________________________________________
+    
+#setting paths for data
+path_to_data = '/Users/alyssajohnson/Documents/SO-NSBP/fits/'
+
+#path to fits file
+Planck857 = path_to_data + 'HFI_SkyMap_857.fits'
+Planck857,h=hp.read_map(Planck857,h=True)
+
+Planck545_file = '/HFI_SkyMap_545.fits'
+Planck545,h=hp.read_map(path_to_data + Planck545_file,h=True)
+
+Planck353_file = '/HFI_SkyMap_353.fits'
+Planck353,h=hp.read_map(path_to_data + Planck353_file,h=True)
+
+Planck143_file = '/HFI_SkyMap_143.fits'
+Planck143,h=hp.read_map(path_to_data + Planck143_file,h=True)
+
+#______________________________________________________________________________ 
+#Setting paths for ACT galaxy clusters [positions] 
+#______________________________________________________________________________
+   
+#path to fits file
+ED56C_file = path_to_data + 'ED56Clusters.fits'
+hdulist = fits.open(ED56C_file)
+hdulist.info()
+
+scidata = hdulist[1].data
+scidata_test = hdulist[1].data[0]                             
+
+#scidata
+#galaxy_coords
+#cols = scidata.columns
+evt_data = Table(scidata)
+
+#______________________________________________________________________________   
+#Setting paths for ACT galaxy clusters [positions] 
+#______________________________________________________________________________
+   
+## ACT-CL J0003.1-0605
+
+c = SkyCoord(scidata[1][1],scidata[1][2], unit='deg')
+c.galactic
+
+hp.gnomview(
+    Planck545, 
+    rot=[141.79390379, -61.20343749],
+    title = scidata[1][0],
+    xsize=300,
+    reso=1.5,
+    flip='astro')
+
+#______________________________________________________________________________  
+#Making fake data
+#______________________________________________________________________________
+
+#size of numpy array, very low resolution, pehaps go to 1024 
+nside = 256 
+npix = 12*nside**2 #number of pixels in map
+Omegapix = 4*pi/npix #solid angle of single pixel
+lmax = 3*nside #maximum l of power spectrum
+
+#What is this seed value?
+seed(123123) 
+
+#multipole, range of 
+l = arange(lmax+1)
+
+#inventing power spectra (large scale is the same as small multipole 
+Nl = exp(-l/50.) + 1e-3 
+
+#fake noise map, synfast will create a Gaussian realization
+n = synfast(Nl, nside)
+
+#this is true map
+strue = zeros(npix) 
+
+#this is generating a bunch of random pixels that will simulate light.
+randompix = uniform(low=0,high=npix,size=10000).astype(int) 
+
+#this is the flux density (Janksy)
+Strue = 3e-3 
+
+#Changing from stradians to thermodynamics units
+#you have to convert from flux density to temperature (RJ)
+strue[randompix] = Strue/Omegapix
+
+#spherical harmonic transform of gaussian beam
+fwhm = 30./60./180*pi
+#beam function
+#going to give you harmonic tranform WITH normalization
+bl = gauss_beam(fwhm,lmax=lmax)
+
+#point source is just a single pixel, you have to convolve because when you 
+#observe a delta function its going to be spread out by the beam
+#convolution in harmonic space
+#strue is map that has point source and you transform to harmonic space (the alm)
+#THEN you multiply by the beam which is sbeamlm (multplying beam with harmonic transform) 
+#BASIC PROPERTY ---> two functions in real space, apply a convolution which transforms into multiplication
+struelm = map2alm(strue,lmax=lmax)
+
+sbeamlm = almxfl(struelm,bl)
+#transforming back into real space
+#sbeamlm = alm object that needs to be transferred back into realspace (multipole)
+#alm2map funciton
+sbeam = alm2map(sbeamlm,nside)
+
+#just adds noise to map
+#data fake observation of point source
+#simulated full sky map of an observation with telescope that has beam of 30 arcminutes
+data = sbeam + n
+
+reso = 5
+
+gnomview(sbeam,reso=reso)
+gnomview(n,reso=reso)
+gnomview(data,reso=reso)
+
+#______________________________________________________________________________
+# Analyze with matched filter
+#______________________________________________________________________________
+   
+#This normalization (get screencap) is from (p. 6) in reading
+#T(k) (get screencap)
+normalization = 1.0/sum(bl**2 / Nl) #N1 is power spectra
+normalization2 = sum(bl)
+mfl = normalization * bl/Nl * normalization2
+
+#have to multiply by size of beam because you are measuring in J/s 
+#to get flux in J you have to multiply by size of beam which is integral of gaussian beam
+#area of beam is integral in stredians
+
+figure()
+plot(l,Nl,label='Nl')
+plot(l,bl,label='bl')
+plot(l,mfl/amax(mfl),label='matched filter')
+
+xlabel('Multipole l')
+legend()
+
+#harmonic transform of data
+datalm = map2alm(data,lmax=lmax)
+
+#this is multiplied by your match filter
+#this is multiplying match filter with harmonic transform of map (data)
+#(pg. 6) This is eqn (1)
+filtdatalm = almxfl(datalm,mfl)
+
+#Transforming back into realspace, which is the integral of (eq .1)
+#Match filter map
+filtdata = alm2map(filtdatalm,nside)
+
+#This will show map with changed reso from above
+#Should resemble gaussian noise
+gnomview(filtdata,reso=reso)
+
+#If you look at the pixel where you put the fake source - you are going to have the integrated flux.
+print(filtdata[randompix[17]])
+#show()
+
+#beam is just normalized to the multipole = 1
+
+
+#Once you have match filter map there will be noise (fitlered out CMB, dust, galaxy only left with point sources)
+#(important) NULL PLACES: Only gaussian background of noise and THAT's where you calculate the noise 
+
+#______________________________________________________________________________
+# Aperture Photometry
+#______________________________________________________________________________
+ 
+#query_disc():
+#radius = range of disc (in degrees) #defining how to use the
+#+90 (Gabriela suggests add + 90) 
+#convert to radians by multiplying by pi/2 or numpy.radians
+ 
+ 
+#transferring map information, this map is only zeroes
+new_map = np.zeros((NPIX))
+new_map[pixel_list] = Planck857[pixel_list]
+ 
+ hp.mollview(
+        new_map,
+        #coord=["G"], #healpy already in gal coordina
+        #unit=" ",
+        fig=None,
+        min=-2,
+        max=20,
+        title='HFI SkyMap 857 Ghz',
+        #cbar=True,
+        cmap=twi_cmap
+        )
+
+hp.mollview(
+        Planck857,
+        #coord=["G","E"],
+        #unit=" ",
+        fig=None,
+        min=-2,
+        max=20,
+        title='HFI SkyMap 857 Ghz',
+        #cbar=True,
+        cmap=twi_cmap
+
+
+
