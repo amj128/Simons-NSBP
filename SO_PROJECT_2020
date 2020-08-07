@@ -5,7 +5,11 @@
 #Project: Look at positions of ACT galaxy clusters (~4000) and look at Planck
 #data at 353, 545, 857 Ghz to look for dust emission.      
 #______________________________________________________________________________ 
+<<<<<<< HEAD
 # (1) Initializing notebook
+=======
+#Initializing notebook
+>>>>>>> fd0a430839ac2ee6b6362589bd086fb182bdf9e2
 #______________________________________________________________________________
 
 import numpy as np
@@ -29,7 +33,11 @@ from pylab import *
 plt.style.use(astropy_mpl_style)
 
 #______________________________________________________________________________  
+<<<<<<< HEAD
 # (2) Setting paths for Planck maps   
+=======
+#Setting paths for Planck maps   
+>>>>>>> fd0a430839ac2ee6b6362589bd086fb182bdf9e2
 #______________________________________________________________________________
     
 #setting paths for data
@@ -49,7 +57,11 @@ Planck143_file = '/HFI_SkyMap_143.fits'
 Planck143,h=hp.read_map(path_to_data + Planck143_file,h=True)
 
 #______________________________________________________________________________ 
+<<<<<<< HEAD
 # (3) Setting paths for ACT galaxy clusters [positions] 
+=======
+#Setting paths for ACT galaxy clusters [positions] 
+>>>>>>> fd0a430839ac2ee6b6362589bd086fb182bdf9e2
 #______________________________________________________________________________
    
 #path to fits file
@@ -64,11 +76,17 @@ scidata_test = hdulist[1].data[0]
 #galaxy_coords
 #cols = scidata.columns
 evt_data = Table(scidata)
+<<<<<<< HEAD
 #len(sz_clusters)
 sz_clusters = sorted(scidata.y0tilde, reverse =  True)
 
 #______________________________________________________________________________   
 # (4) TEST
+=======
+
+#______________________________________________________________________________   
+#Setting paths for ACT galaxy clusters [positions] 
+>>>>>>> fd0a430839ac2ee6b6362589bd086fb182bdf9e2
 #______________________________________________________________________________
    
 ## ACT-CL J0003.1-0605
@@ -85,7 +103,11 @@ hp.gnomview(
     flip='astro')
 
 #______________________________________________________________________________  
+<<<<<<< HEAD
 # (5) Making fake data
+=======
+#Making fake data
+>>>>>>> fd0a430839ac2ee6b6362589bd086fb182bdf9e2
 #______________________________________________________________________________
 
 #size of numpy array, very low resolution, pehaps go to 1024 
@@ -151,7 +173,11 @@ gnomview(n,reso=reso)
 gnomview(data,reso=reso)
 
 #______________________________________________________________________________
+<<<<<<< HEAD
 # (6) Analyze with matched filter
+=======
+# Analyze with matched filter
+>>>>>>> fd0a430839ac2ee6b6362589bd086fb182bdf9e2
 #______________________________________________________________________________
    
 #This normalization (get screencap) is from (p. 6) in reading
@@ -199,7 +225,11 @@ print(filtdata[randompix[17]])
 #(important) NULL PLACES: Only gaussian background of noise and THAT's where you calculate the noise 
 
 #______________________________________________________________________________
+<<<<<<< HEAD
 # (7) Aperture Photometry
+=======
+# Aperture Photometry
+>>>>>>> fd0a430839ac2ee6b6362589bd086fb182bdf9e2
 #______________________________________________________________________________
  
 #query_disc():
